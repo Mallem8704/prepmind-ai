@@ -1013,6 +1013,21 @@ body::before {
     <p class="landing-sub">
       Enter your target exam and get an AI-powered prep dashboard with practice questions, personalized teaching, doubt solving, and progress tracking — all in one place.
     </p>
+
+    <div style="width:100%;max-width:520px;margin:0 auto 14px;">
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--radius);padding:14px 18px;transition:border-color 0.2s;" id="apiKeyWrap">
+        <span style="font-size:16px;flex-shrink:0">🔑</span>
+        <input type="password" id="apiKeyInput" placeholder="Paste your Anthropic API key (sk-ant-...)"
+          style="flex:1;background:none;border:none;outline:none;font-family:var(--font-body);font-size:14px;color:var(--text);"
+          onfocus="document.getElementById('apiKeyWrap').style.borderColor='var(--accent)'"
+          onblur="document.getElementById('apiKeyWrap').style.borderColor=''"
+          onkeydown="if(event.key==='Enter') startPrep()">
+        <span id="keyStatus" style="font-size:13px;color:var(--text3);flex-shrink:0">required</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:left;padding:0 4px;">
+        🔒 Your key is never stored — it stays in memory only for this session. Get a free key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);text-decoration:none;">console.anthropic.com</a>
+      </div>
+    </div>
     
     <div class="exam-input-wrap">
       <input type="text" class="exam-input" id="examInput" 
@@ -1243,6 +1258,7 @@ body::before {
 // ═══════════════════════════════════════════
 let state = {
   examName: '',
+  apiKey: '',
   topics: [],
   overviewData: null,
   chatHistory: [],
@@ -1267,12 +1283,12 @@ async function callClaude(messages, systemPrompt = '') {
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 
-  'Content-Type': 'application/json',
-  'x-api-key': 'sk-ant-api03-7B3BjSiNmmhxLsz57FFavWGJx2gnKqgEIUAdPZcuKI73J3nqUPLAdQAmX0wJMNeV3hUi6aCanslf1cbzOLyw-wWnAIwAA',
-  'anthropic-version': '2023-06-01',
-  'anthropic-dangerous-direct-browser-access': 'true'
-},
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
     body: JSON.stringify(body)
   });
 
@@ -1303,20 +1319,36 @@ function backToLanding() {
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('landing').style.display = 'flex';
   state = {
-    examName: '', topics: [], overviewData: null, chatHistory: [],
+    examName: '', apiKey: '', topics: [], overviewData: null, chatHistory: [],
     progress: { total:0, correct:0, streak:0, score:0, topics:{}, diff:{Easy:{a:0,c:0},Medium:{a:0,c:0},Hard:{a:0,c:0}} },
     currentQuestion: null
   };
 }
 
 async function startPrep() {
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
   const val = document.getElementById('examInput').value.trim();
+
+  if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+    const wrap = document.getElementById('apiKeyWrap');
+    wrap.style.borderColor = 'var(--red)';
+    document.getElementById('keyStatus').textContent = '❌ invalid key';
+    document.getElementById('keyStatus').style.color = 'var(--red)';
+    setTimeout(() => { wrap.style.borderColor = ''; document.getElementById('keyStatus').textContent = 'required'; document.getElementById('keyStatus').style.color = ''; }, 2500);
+    return;
+  }
+
   if (!val) {
     document.getElementById('examInput').style.borderColor = 'var(--red)';
     setTimeout(() => document.getElementById('examInput').style.borderColor = '', 1200);
     return;
   }
+
+  state.apiKey = apiKey;
   state.examName = val;
+
+  document.getElementById('keyStatus').textContent = '✅';
+  document.getElementById('keyStatus').style.color = 'var(--green)';
 
   // show loading
   document.getElementById('landing').style.display = 'none';
